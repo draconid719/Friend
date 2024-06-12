@@ -44,6 +44,8 @@ class TranscriptWidgetState extends State<TranscriptWidget> {
   Timer? _conversationAdvisorTimer;
   bool memoryCreating = false;
 
+  Timer? _smartReminderTimer;
+
   @override
   void initState() {
     btDevice = widget.btDevice;
@@ -54,6 +56,9 @@ class TranscriptWidgetState extends State<TranscriptWidget> {
       _initiateConversationAdvisorTimer();
     }
     _processCachedTranscript();
+    if (SharedPreferencesUtil().smartReminderIsChecked) {
+      _initiateSmartReminderTimer();
+    }
     super.initState();
   }
 
@@ -61,6 +66,7 @@ class TranscriptWidgetState extends State<TranscriptWidget> {
   void dispose() {
     _conversationAdvisorTimer?.cancel();
     _memoryCreationTimer?.cancel();
+    _smartReminderTimer?.cancel();
     debugPrint('TranscriptWidget disposed');
     super.dispose();
   }
@@ -208,6 +214,32 @@ class TranscriptWidgetState extends State<TranscriptWidget> {
         MixpanelManager().coachAdvisorFeedback(transcript, advice);
         clearNotification(3);
         createNotification(notificationId: 3, title: 'Your Conversation Coach Says', body: advice);
+      }
+    });
+  }
+
+  _initiateSmartReminderTimer() {
+    // TODO: add absolute time reminding like, "I will have this 3pm meeting, will try to show up"
+    _smartReminderTimer = Timer.periodic(const Duration(seconds: 60 * 2), (timer) async {
+      addEventToContext('Smart Reminder Timer Triggered');
+      var transcript = _buildDiarizedTranscriptMessage(segments);
+      debugPrint('_initiateSmartReminderTimer: $transcript');
+      var reminder = await smartReminder(transcript);
+
+      if (reminder.isNotEmpty) {
+        Map<String, dynamic> reminderData = jsonDecode(reminder);
+        String actionItem = reminderData['action_item'];
+        int? dueMinutes = reminderData['due_minutes'];
+
+        // TODO?
+        // MixpanelManager().coachAdvisorFeedback(transcript, actionItem);
+        clearNotification(3);
+        createNotification(
+          notificationId: 3, 
+          title: 'Friendly reminder', 
+          body: actionItem,
+          delayMinutes: dueMinutes,
+        );
       }
     });
   }

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:friend_private/backend/utils.dart';
 
 class Structured {
   String title;
@@ -104,20 +105,21 @@ class MemoryRecord {
   String getStructuredString() => structured.toString();
 
   static String memoriesToString(List<MemoryRecord> memories) => memories
-      .map((e) => '''
-      ${e.createdAt.toIso8601String().split('.')[0]}
-      Title: ${e.structured.title}
-      Summary: ${e.structured.overview}
-      ${e.structured.actionItems.isNotEmpty ? 'Action Items:' : ''}
-      ${e.structured.actionItems.map((item) => '  - $item').join('\n')}
-      ${e.structured.pluginsResponse.isNotEmpty ? 'Plugins Response:' : ''}
-      ${e.structured.pluginsResponse.map((response) => '  - $response').join('\n')}
-      Category: ${e.structured.category}
-      '''
-          .replaceAll('      ', '')
-          .trim())
-      .join('\n\n');
-}
+    .map((e) {
+      var memoryString = '''
+        ${e.createdAt.toIso8601String().split('.')[0]}
+        Title: ${e.structured.title}
+        Summary: ${e.structured.overview}
+        ${e.structured.actionItems.isNotEmpty ? 'Action Items:' : ''}
+        ${e.structured.actionItems.map((item) => '  - $item').join('\n')}
+        ${e.structured.pluginsResponse.isNotEmpty ? 'Plugins Response:' : ''}
+        ${e.structured.pluginsResponse.map((response) => '  - $response').join('\n')}
+        Category: ${e.structured.category}
+      ''';
+      return cleanPrompt(memoryString);
+    })
+    .join('\n\n');
+  }
 
 class MemoryStorage {
   static const String _storageKey = '_memories';
