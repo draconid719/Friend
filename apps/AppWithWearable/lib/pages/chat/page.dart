@@ -176,10 +176,25 @@ class _ChatPageState extends State<ChatPage> with AutomaticKeepAliveClientMixin 
     List<String> memoryIds = ragInfo[1].cast<String>();
     debugPrint('RAG Context: $ragContext');
     MixpanelManager().chatMessageSent(message);
+
+    final pluginsEnabled = SharedPreferencesUtil().pluginsEnabled;
+    final pluginsList = SharedPreferencesUtil().pluginsList;
+    final enabledPlugins = pluginsList.where((e) => pluginsEnabled.contains(e.id)).toList();
+
+    // set personality to empty string if no plugins enabled
+    dynamic personality = enabledPlugins.isNotEmpty 
+        ? (enabledPlugins.length > 1 
+            ? enabledPlugins.map((e) => e.prompt).toList() 
+            : enabledPlugins.first.prompt) 
+        : "";
+
+    await streamApiResponse(personality, ragContext, _callbackFunctionChatStreaming(memoryIds), _messages, () {
+      _messages.last.memoryIds = memoryIds;
+      prefs.chatMessages = _messages;
     // TODO: make sure about few things here
-    await streamApiResponse(ragContext, _callbackFunctionChatStreaming(memoryIds), widget.messages, () {
-      widget.messages.last.memoryIds = memoryIds;
-      prefs.chatMessages = widget.messages;
+    //     await streamApiResponse(ragContext, _callbackFunctionChatStreaming(memoryIds), widget.messages, () {
+    //       widget.messages.last.memoryIds = memoryIds;
+    //       prefs.chatMessages = widget.messages;
     });
     changeLoadingState();
   }

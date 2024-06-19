@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 Future streamApiResponse(
+  dynamic personality,
   String context,
   Future<dynamic> Function(String) callback,
   List<Message> chatHistory,
@@ -20,7 +21,7 @@ Future streamApiResponse(
     'Authorization': 'Bearer ${getOpenAIApiKeyForUsage()}',
   };
 
-  String body = qaStreamedBody(context, retrieveMostRecentMessages(chatHistory));
+  String body = qaStreamedBody(personality, context, retrieveMostRecentMessages(chatHistory));
   var request = http.Request("POST", Uri.parse(url))
     ..headers.addAll(headers)
     ..body = body;
@@ -110,8 +111,18 @@ void handlePartialResponseContent(String data, Future<dynamic> Function(String) 
   }
 }
 
-String qaStreamedBody(String context, List<Message> chatHistory) {
+String qaStreamedBody(dynamic personality, String context, List<Message> chatHistory) {
+
+  var personalityPrompt = '';
+  if (personality is String) {
+    personalityPrompt = personality.isNotEmpty ? 'This is your personality, you should try to answer in this style: $personality\n' : '';
+  } else if (personality is List<String>) {
+    if (personality.isNotEmpty) {
+      personalityPrompt = 'These are your available personalities, pick the style among them that fits best to the ongoing conversation:\n${personality.map((p) => '- $p').join('\n')}\n';
+    }
+  }
   var prompt = '''
+    $personalityPrompt
     You are an assistant for question-answering tasks. Use the following pieces of retrieved context to answer the question. 
     If you don't know the answer, just say that you don't know. Use three sentences maximum and keep the answer concise.
     If the message doesn't require context, it will be empty, so answer the question casually.
@@ -120,7 +131,7 @@ String qaStreamedBody(String context, List<Message> chatHistory) {
     ${chatHistory.map((e) => '${e.type.toString().toUpperCase()}: ${e.text}').join('\n')}
 
     Context:
-    ``` 
+    ```
     $context
     ```
     Answer:
